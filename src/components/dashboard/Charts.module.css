@@ -1,0 +1,20 @@
+.chartCard {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 350px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-espresso);
+  margin: 0;
+}
+
+.chartContainer {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}

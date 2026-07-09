@@ -1,0 +1,136 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-espresso);
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btnSecondary {
+  padding: 8px 16px;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  color: var(--color-espresso);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+}
+
+.btnSecondary:hover {
+  background-color: var(--color-bg);
+}
+
+.btnPrimary {
+  padding: 8px 16px;
+  background-color: var(--color-espresso);
+  color: var(--color-white);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+}
+
+.btnPrimary:hover {
+  background-color: var(--color-cocoa);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.iconWrapper {
+  color: var(--color-camel);
+  margin-bottom: 1rem;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-espresso);
+  margin-bottom: 8px;
+}
+
+.emptySubtitle {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  max-width: 400px;
+}
+
+.dummyTable {
+  padding: 1.5rem;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1fr 3fr 1fr 2fr;
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1fr 3fr 1fr 2fr;
+  padding: 16px 12px;
+  border-bottom: 1px solid rgba(215, 201, 184, 0.2);
+  align-items: center;
+  font-size: 14px;
+  color: var(--color-espresso);
+  transition: background-color var(--transition-fast);
+}
+
+.tableRow:hover {
+  background-color: rgba(215, 201, 184, 0.1);
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background-color: rgba(46, 125, 50, 0.1); /* light success */
+  color: var(--color-success);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  width: max-content;
+}

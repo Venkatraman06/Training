@@ -1,0 +1,239 @@
+.sidebar {
+  width: 260px;
+  background-color: var(--color-linen);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-espresso);
+  color: var(--color-white);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.logoText {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-espresso);
+  letter-spacing: -0.01em;
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.navItem:hover {
+  background-color: rgba(215, 201, 184, 0.2); /* khaki transparent */
+  color: var(--color-espresso);
+}
+
+.navItem.active {
+  background-color: var(--color-khaki);
+  color: var(--color-espresso);
+  font-weight: 600;
+}
+
+.icon {
+  opacity: 0.8;
+}
+
+.navItem:hover .icon,
+.navItem.active .icon {
+  opacity: 1;
+}
+
+/* Accordion Styles */
+.navCategory {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-espresso);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  margin-top: 8px;
+}
+
+.navCategory:hover {
+  background-color: rgba(215, 201, 184, 0.2);
+}
+
+.categoryLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chevron {
+  transition: transform 0.2s ease;
+  color: var(--color-text-muted);
+}
+
+.chevron.open {
+  transform: rotate(90deg);
+}
+
+.subItems {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 14px;
+  margin-left: 14px;
+  border-left: 1px solid var(--color-border);
+  margin-top: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.navSubItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.navSubItem:hover {
+  background-color: rgba(215, 201, 184, 0.2);
+  color: var(--color-espresso);
+}
+
+.navSubItem.active {
+  background-color: var(--color-camel);
+  color: var(--color-white);
+  font-weight: 600;
+}
+
+.navSubItem.active .icon {
+  opacity: 1;
+}
+
+.navItemWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.itemToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: -4px;
+}
+
+.itemToggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.level3Items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 32px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.level3Item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.level3Item:hover {
+  background-color: rgba(215, 201, 184, 0.2);
+  color: var(--color-espresso);
+}
+
+.level3Item.active {
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.navMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 2px 8px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  transition: all 0.2s ease-in-out;
+}
+
+.navMenuItem:hover {
+  background-color: rgba(37, 99, 235, 0.05);
+  color: var(--color-text-main);
+}
+
+.navMenuItem.active {
+  background-color: var(--color-secondary);
+  color: var(--color-white) !important;
+}
+
+.navMenuItem.active span {
+  color: var(--color-white) !important;
+}
+
+.navMenuItem.active svg {
+  color: var(--color-white) !important;
+}
+

@@ -1,0 +1,28 @@
+services:
+  # 1. Django Backend Web Service
+  - type: web
+    name: hackers-infotech-backend
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn trainops_backend.wsgi --log-file -"
+    rootDir: backend
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.5
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
+
+  # 2. Vite Frontend Static Site
+  - type: web
+    name: hackers-infotech-frontend
+    env: static
+    buildCommand: "npm run build"
+    publishDir: dist
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
