@@ -3,11 +3,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
-from .models import Task, Lead, Client, Proposal, ActivityLog, College, Trainer, Training, Student, PersonalStudent
+from .models import Task, Lead, Client, Proposal, ActivityLog, College, Trainer, Training, Student, PersonalStudent, Meeting, LeadTask, LeadDocument
 from .serializers import (
     TaskSerializer, CustomTokenObtainPairSerializer, UserSerializer,
     LeadSerializer, ClientSerializer, ProposalSerializer, ActivityLogSerializer,
-    CollegeSerializer, TrainerSerializer, TrainingSerializer, StudentSerializer, PersonalStudentSerializer
+    CollegeSerializer, TrainerSerializer, TrainingSerializer, StudentSerializer, PersonalStudentSerializer,
+    MeetingSerializer, LeadTaskSerializer, LeadDocumentSerializer
 )
 
 User = get_user_model()
@@ -112,6 +113,39 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(lead_id=lead_id)
         if client_id:
             queryset = queryset.filter(client_id=client_id)
+        return queryset
+
+class MeetingViewSet(viewsets.ModelViewSet):
+    queryset = Meeting.objects.all().order_by('-created_at')
+    serializer_class = MeetingSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        lead_id = self.request.query_params.get('lead')
+        if lead_id:
+            queryset = queryset.filter(lead_id=lead_id)
+        return queryset
+
+class LeadTaskViewSet(viewsets.ModelViewSet):
+    queryset = LeadTask.objects.all().order_by('-created_at')
+    serializer_class = LeadTaskSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        lead_id = self.request.query_params.get('lead')
+        if lead_id:
+            queryset = queryset.filter(lead_id=lead_id)
+        return queryset
+
+class LeadDocumentViewSet(viewsets.ModelViewSet):
+    queryset = LeadDocument.objects.all().order_by('-uploaded_at')
+    serializer_class = LeadDocumentSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        lead_id = self.request.query_params.get('lead')
+        if lead_id:
+            queryset = queryset.filter(lead_id=lead_id)
         return queryset
 
 class CollegeViewSet(viewsets.ModelViewSet):

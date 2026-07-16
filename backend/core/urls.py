@@ -4,7 +4,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     TaskViewSet, CustomTokenObtainPairView, CurrentUserView,
     LeadViewSet, ClientViewSet, ProposalViewSet, ActivityLogViewSet,
-    CollegeViewSet, TrainerViewSet, TrainingViewSet, StudentViewSet, PersonalStudentViewSet
+    CollegeViewSet, TrainerViewSet, TrainingViewSet, StudentViewSet, PersonalStudentViewSet,
+    MeetingViewSet, LeadTaskViewSet, LeadDocumentViewSet
 )
 
 router = DefaultRouter()
@@ -13,6 +14,9 @@ router.register(r'leads', LeadViewSet)
 router.register(r'clients', ClientViewSet)
 router.register(r'proposals', ProposalViewSet)
 router.register(r'activities', ActivityLogViewSet)
+router.register(r'meetings', MeetingViewSet)
+router.register(r'lead-tasks', LeadTaskViewSet)
+router.register(r'lead-documents', LeadDocumentViewSet)
 router.register(r'colleges', CollegeViewSet)
 router.register(r'trainers', TrainerViewSet)
 router.register(r'trainings', TrainingViewSet)
