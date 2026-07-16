@@ -1,156 +1,218 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-// No lucide icons used in this file
 import styles from './ModulePlaceholder.module.css';
 import { useToast } from '../context/ToastContext';
 
-interface Deal {
+const API_URL = 'http://127.0.0.1:8000/api';
+
+const getToken = () => localStorage.getItem('token');
+
+const apiCall = async (endpoint: string, method = 'GET', body?: object) => {
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (method === 'DELETE') return null;
+  return res.json();
+};
+
+interface Lead {
   id: number;
-  title: string;
-  clientName: string;
-  expectedValue: string;
-  stage: 'Active' | 'Negotiation' | 'Won' | 'Lost';
-  followupNotes: string;
-  lastContact: string;
+  name: string;
+  company: string | null;
+  college: string | null;
+  contact_person: string | null;
+  phone: string | null;
+  email: string | null;
+  status: 'LEAD' | 'CONTACTED' | 'PROPOSAL_SENT' | 'WON' | 'LOST';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  expected_deal_value: string;
+  remarks: string | null;
+  follow_up_date: string | null;
+  created_at: string;
 }
 
-interface Quotation {
+interface Proposal {
   id: number;
-  quoteNo: string;
-  clientName: string;
-  trainingCost: number;
-  discount: number;
-  gst: number;
-  netAmount: number;
-  status: 'Pending' | 'Approved' | 'Sent';
+  title: string;
+  client: number;
+  client_details?: { id: number; name: string };
+  training_cost: string;
+  discount: string;
+  gst: string;
+  status: 'PENDING' | 'WON' | 'LOST';
 }
+
+const STATUS_LABEL: Record<Lead['status'], string> = {
+  LEAD: 'New Lead',
+  CONTACTED: 'Contacted',
+  PROPOSAL_SENT: 'Proposal Sent',
+  WON: 'Won',
+  LOST: 'Lost',
+};
+
+const STATUS_COLOR: Record<Lead['status'], string> = {
+  LEAD: '#6366f1',
+  CONTACTED: '#F59E0B',
+  PROPOSAL_SENT: '#3B82F6',
+  WON: '#10B981',
+  LOST: '#EF4444',
+};
 
 const SalesCRM: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [subTab, setSubTab] = useState<'dashboard' | 'opportunities' | 'quotations' | 'followup' | 'meetings' | 'documents'>('opportunities');
   const { addToast } = useToast();
 
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.includes('/sales/dashboard')) {
-      setSubTab('dashboard');
-    } else if (path.includes('/sales/opportunities')) {
-      setSubTab('opportunities');
-    } else if (path.includes('/sales/quotes')) {
-      setSubTab('quotations');
-    } else if (path.includes('/sales/followups')) {
-      setSubTab('followup');
-    } else if (path.includes('/sales/meetings')) {
-      setSubTab('meetings');
-    } else if (path.includes('/sales/documents')) {
-      setSubTab('documents');
-    } else {
-      // Default /sales path
-      setSubTab('quotations');
-    }
-  }, [location.pathname]);
+  const [subTab, setSubTab] = useState<'dashboard' | 'opportunities' | 'quotations' | 'followup' | 'meetings' | 'documents'>('opportunities');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleTabChange = (tab: typeof subTab) => {
-    if (tab === 'dashboard') {
-      navigate('/sales/dashboard');
-    } else if (tab === 'opportunities') {
-      navigate('/sales/opportunities');
-    } else if (tab === 'quotations') {
-      navigate('/sales/quotes');
-    } else if (tab === 'followup') {
-      navigate('/sales/followups');
-    } else if (tab === 'meetings') {
-      navigate('/sales/meetings');
-    } else if (tab === 'documents') {
-      navigate('/sales/documents');
-    }
-  };
+  const [newLead, setNewLead] = useState({
+    name: '',
+    company: '',
+    college: '',
+    contact_person: '',
+    phone: '',
+    email: '',
+    status: 'LEAD' as Lead['status'],
+    priority: 'MEDIUM' as Lead['priority'],
+    expected_deal_value: '',
+    remarks: '',
+  });
 
-  // Deals Mock State
-  const [deals, setDeals] = useState<Deal[]>([
-    { id: 1, title: 'React JS Corporate Training', clientName: 'MIT Pune', expectedValue: '18000.00', stage: 'Negotiation', followupNotes: 'Price discussion on GST exemptions.', lastContact: '2026-07-08' },
-    { id: 2, title: 'AWS Cloud Certification Batch', clientName: 'Stanford University', expectedValue: '15000.00', stage: 'Won', followupNotes: 'MoU Signed. Initial batch setup scheduled.', lastContact: '2026-07-08' },
-    { id: 3, title: 'Data Science & ML Bootcamp', clientName: 'VIT Vellore', expectedValue: '25000.00', stage: 'Active', followupNotes: 'Sent customized syllabus outline.', lastContact: '2026-07-07' }
-  ]);
+  const [newProposal, setNewProposal] = useState({
+    title: '',
+    training_cost: '',
+    discount: '',
+  });
 
-  const [newDealTitle, setNewDealTitle] = useState('');
-  const [newDealClient, setNewDealClient] = useState('MIT Pune');
-  const [newDealVal, setNewDealVal] = useState('');
-  const [newDealStage, setNewDealStage] = useState<Deal['stage']>('Active');
-
-  // Quotations Mock State
-  const [quotes, setQuotes] = useState<Quotation[]>([
-    { id: 1, quoteNo: 'Q-1024', clientName: 'MIT Pune', trainingCost: 18000, discount: 2000, gst: 2880, netAmount: 18880, status: 'Sent' },
-    { id: 2, quoteNo: 'Q-1025', clientName: 'VIT Vellore', trainingCost: 25000, discount: 3000, gst: 3960, netAmount: 25960, status: 'Approved' }
-  ]);
-
-  const [quoteCost, setQuoteCost] = useState('');
-  const [quoteDisc, setQuoteDisc] = useState('');
-  const [quoteClient, setQuoteClient] = useState('MIT Pune');
-
-  // Client meetings Mock State
   const [salesMeetings, setSalesMeetings] = useState([
     { id: 1, clientName: 'MIT Pune', title: 'Pricing & Contract Discussion', date: '2026-07-08', time: '11:00 AM', outcome: 'Need updated GST proposal' },
-    { id: 2, clientName: 'VIT Vellore', title: 'Data Science Demo Session', date: '2026-07-09', time: '03:00 PM', outcome: 'Syllabus accepted by Placement Team' }
+    { id: 2, clientName: 'VIT Vellore', title: 'Data Science Demo Session', date: '2026-07-09', time: '03:00 PM', outcome: 'Syllabus accepted by Placement Team' },
   ]);
-
   const [meetTitle, setMeetTitle] = useState('');
   const [meetDate, setMeetDate] = useState('');
   const [meetTime, setMeetTime] = useState('');
-  const [meetClient, setMeetClient] = useState('MIT Pune');
+  const [meetClient, setMeetClient] = useState('');
 
-  const handleCreateDeal = () => {
-    if (!newDealTitle || !newDealVal) {
-      addToast('Please enter deal title and value', 'error');
-      return;
-    }
-    const dl: Deal = {
-      id: Date.now(),
-      title: newDealTitle,
-      clientName: newDealClient,
-      expectedValue: parseFloat(newDealVal).toFixed(2),
-      stage: newDealStage,
-      followupNotes: 'New deal captured.',
-      lastContact: new Date().toISOString().split('T')[0]
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/sales/dashboard')) setSubTab('dashboard');
+    else if (path.includes('/sales/opportunities')) setSubTab('opportunities');
+    else if (path.includes('/sales/quotes')) setSubTab('quotations');
+    else if (path.includes('/sales/followups')) setSubTab('followup');
+    else if (path.includes('/sales/meetings')) setSubTab('meetings');
+    else if (path.includes('/sales/documents')) setSubTab('documents');
+    else setSubTab('opportunities');
+  }, [location.pathname]);
+
+  const handleTabChange = (tab: typeof subTab) => {
+    const routes: Record<typeof subTab, string> = {
+      dashboard: '/sales/dashboard',
+      opportunities: '/sales/opportunities',
+      quotations: '/sales/quotes',
+      followup: '/sales/followups',
+      meetings: '/sales/meetings',
+      documents: '/sales/documents',
     };
-    setDeals([...deals, dl]);
-    setNewDealTitle('');
-    setNewDealVal('');
-    addToast('Deal recorded in sales pipeline!', 'success');
+    navigate(routes[tab]);
   };
 
-  const handleUpdateDealStage = (id: number, stage: Deal['stage']) => {
-    setDeals(deals.map(d => d.id === id ? { ...d, stage: stage, lastContact: new Date().toISOString().split('T')[0] } : d));
-    addToast(`Deal stage updated to ${stage}`, 'success');
+  const fetchLeads = async () => {
+    setLoading(true);
+    try {
+      const data = await apiCall('/leads/');
+      setLeads(data.results ?? data);
+    } catch {
+      addToast('Failed to load leads', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreateQuote = () => {
-    if (!quoteCost) {
-      addToast('Please enter training cost', 'error');
+  const fetchProposals = async () => {
+    try {
+      const data = await apiCall('/proposals/');
+      setProposals(data.results ?? data);
+    } catch {
+      addToast('Failed to load proposals', 'error');
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+    fetchProposals();
+  }, []);
+
+  const handleCreateLead = async () => {
+    if (!newLead.name || !newLead.expected_deal_value) {
+      addToast('Name and deal value are required', 'error');
       return;
     }
-    const cost = parseFloat(quoteCost);
-    const disc = parseFloat(quoteDisc || '0');
-    const taxable = cost - disc;
-    const gstVal = Math.round(taxable * 0.18);
-    const net = taxable + gstVal;
+    try {
+      const created = await apiCall('/leads/', 'POST', {
+        name: newLead.name,
+        company: newLead.company || null,
+        college: newLead.college || null,
+        contact_person: newLead.contact_person || null,
+        phone: newLead.phone || null,
+        email: newLead.email || null,
+        status: newLead.status,
+        priority: newLead.priority,
+        expected_deal_value: newLead.expected_deal_value,
+        remarks: newLead.remarks || null,
+        follow_up_date: null,
+        next_follow_up: null,
+        last_contact_date: null,
+      });
+      setLeads(prev => [created, ...prev]);
+      setNewLead({ name: '', company: '', college: '', contact_person: '', phone: '', email: '', status: 'LEAD', priority: 'MEDIUM', expected_deal_value: '', remarks: '' });
+      addToast('Lead added successfully!', 'success');
+    } catch {
+      addToast('Failed to create lead', 'error');
+    }
+  };
 
-    const qNo = `Q-${1024 + quotes.length}`;
-    const quote: Quotation = {
-      id: Date.now(),
-      quoteNo: qNo,
-      clientName: quoteClient,
-      trainingCost: cost,
-      discount: disc,
-      gst: gstVal,
-      netAmount: net,
-      status: 'Sent'
-    };
-    setQuotes([...quotes, quote]);
-    setQuoteCost('');
-    setQuoteDisc('');
-    addToast(`Quotation ${qNo} generated successfully!`, 'success');
+  const handleUpdateLeadStatus = async (id: number, status: Lead['status']) => {
+    try {
+      const updated = await apiCall(`/leads/${id}/`, 'PATCH', { status });
+      setLeads(prev => prev.map(l => l.id === id ? updated : l));
+      addToast(`Lead moved to ${STATUS_LABEL[status]}`, 'success');
+    } catch {
+      addToast('Failed to update lead', 'error');
+    }
+  };
+
+  const handleCreateProposal = async () => {
+    if (!newProposal.title || !newProposal.training_cost) {
+      addToast('Title and training cost are required', 'error');
+      return;
+    }
+    try {
+      const cost = parseFloat(newProposal.training_cost);
+      const disc = parseFloat(newProposal.discount || '0');
+      const gst = ((cost - disc) * 0.18).toFixed(2);
+      const created = await apiCall('/proposals/', 'POST', {
+        title: newProposal.title,
+        training_cost: cost,
+        discount: disc,
+        gst,
+        status: 'PENDING',
+        client: 1,
+      });
+      setProposals(prev => [created, ...prev]);
+      setNewProposal({ title: '', training_cost: '', discount: '' });
+      addToast('Proposal created!', 'success');
+    } catch {
+      addToast('Failed to create proposal. Make sure at least one Client exists.', 'error');
+    }
   };
 
   const handleAddMeeting = () => {
@@ -158,24 +220,29 @@ const SalesCRM: React.FC = () => {
       addToast('Please fill all meeting details', 'error');
       return;
     }
-    const meet = {
-      id: Date.now(),
-      clientName: meetClient,
-      title: meetTitle,
-      date: meetDate,
-      time: meetTime,
-      outcome: 'Scheduled'
-    };
-    setSalesMeetings([...salesMeetings, meet]);
-    setMeetTitle('');
-    setMeetDate('');
-    setMeetTime('');
-    addToast('Client meeting scheduled!', 'success');
+    setSalesMeetings(prev => [...prev, { id: Date.now(), clientName: meetClient, title: meetTitle, date: meetDate, time: meetTime, outcome: 'Scheduled' }]);
+    setMeetTitle(''); setMeetDate(''); setMeetTime('');
+    addToast('Meeting scheduled!', 'success');
   };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px', borderRadius: '8px',
+    border: '1px solid var(--color-border)',
+    backgroundColor: 'var(--color-surface)',
+    color: 'var(--color-text-main)',
+    boxSizing: 'border-box',
+  };
+  const labelStyle: React.CSSProperties = { display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' };
+
+  const wonLeads = leads.filter(l => l.status === 'WON');
+  const activeLeads = leads.filter(l => l.status === 'LEAD' || l.status === 'CONTACTED');
+  const wonValue = wonLeads.reduce((sum, l) => sum + parseFloat(l.expected_deal_value || '0'), 0);
+  const pipelineValue = leads.reduce((sum, l) => sum + parseFloat(l.expected_deal_value || '0'), 0);
+
+  const STATUSES: Lead['status'][] = ['LEAD', 'CONTACTED', 'PROPOSAL_SENT', 'WON', 'LOST'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%', overflowY: 'auto' }}>
-      {/* Header */}
       <div className={styles.header} style={{ borderBottom: 'none', paddingBottom: 0 }}>
         <div>
           <h1 className={styles.title}>Sales CRM Hub</h1>
@@ -183,227 +250,284 @@ const SalesCRM: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub-tab Navigation Bar */}
       <div className="glass-panel" style={{ display: 'flex', gap: '8px', padding: '6px', borderRadius: '10px' }}>
         {(['dashboard', 'opportunities', 'quotations', 'followup', 'meetings', 'documents'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
             style={{
-              padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold',
+              padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+              fontSize: '13px', fontWeight: 'bold',
               background: subTab === tab ? 'var(--color-secondary)' : 'transparent',
               color: subTab === tab ? 'white' : 'var(--color-text-muted)',
-              textTransform: 'capitalize', transition: 'all 0.2s'
+              textTransform: 'capitalize', transition: 'all 0.2s',
             }}
           >
-            {tab === 'followup' ? 'Sales Follow-up' : tab}
+            {tab === 'followup' ? 'Follow-up' : tab}
           </button>
         ))}
       </div>
 
-      {/* Dashboard View */}
+      {/* DASHBOARD */}
       {subTab === 'dashboard' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.0rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Closed/Won Revenue</span>
-              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: '#10B981' }}>$15,000</h3>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Won Revenue</span>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: '#10B981' }}>₹{wonValue.toLocaleString()}</h3>
             </div>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Opportunities Value</span>
-              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: 'var(--color-secondary)' }}>$43,000</h3>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Pipeline Value</span>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: 'var(--color-secondary)' }}>₹{pipelineValue.toLocaleString()}</h3>
             </div>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Active Proposals</span>
-              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: 'var(--color-accent)' }}>{deals.filter(d=>d.stage==='Active').length}</h3>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Active Leads</span>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: 'var(--color-accent)' }}>{activeLeads.length}</h3>
             </div>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Negotiation Deals</span>
-              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: '#F59E0B' }}>{deals.filter(d=>d.stage==='Negotiation').length}</h3>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Total Leads</span>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '6px', color: '#F59E0B' }}>{leads.length}</h3>
             </div>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '1rem' }}>Active Pipeline Forecast</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {deals.map(deal => (
-                  <div key={deal.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingBottom: '8px', borderBottom: '1px solid var(--color-border)' }}>
-                    <div>
-                      <strong style={{ display: 'block' }}>{deal.title}</strong>
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Client: {deal.clientName}</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <strong style={{ display: 'block', color: 'var(--color-secondary)' }}>${parseFloat(deal.expectedValue).toLocaleString()}</strong>
-                      <span style={{ fontSize: '10px', padding: '2px 6px', background: 'var(--color-linen)', borderRadius: '4px', fontWeight: 'bold' }}>{deal.stage}</span>
-                    </div>
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '1rem' }}>Pipeline Overview</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {leads.slice(0, 8).map(lead => (
+                <div key={lead.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingBottom: '8px', borderBottom: '1px solid var(--color-border)' }}>
+                  <div>
+                    <strong style={{ display: 'block' }}>{lead.name}</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{lead.company || lead.college || '—'}</span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '1rem' }}>Conversion Rates</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}><span>Won Conversion</span><strong>66.6%</strong></div>
-                  <div style={{ height: '8px', background: 'var(--color-border)', borderRadius: '4px' }}><div style={{ height: '100%', width: '66%', background: '#10B981', borderRadius: '4px' }}></div></div>
+                  <div style={{ textAlign: 'right' }}>
+                    <strong style={{ display: 'block', color: 'var(--color-secondary)' }}>₹{parseFloat(lead.expected_deal_value).toLocaleString()}</strong>
+                    <span style={{ fontSize: '10px', padding: '2px 6px', background: STATUS_COLOR[lead.status] + '22', color: STATUS_COLOR[lead.status], borderRadius: '4px', fontWeight: 'bold' }}>
+                      {STATUS_LABEL[lead.status]}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}><span>Negotiations Progress</span><strong>85%</strong></div>
-                  <div style={{ height: '8px', background: 'var(--color-border)', borderRadius: '4px' }}><div style={{ height: '100%', width: '85%', background: '#F59E0B', borderRadius: '4px' }}></div></div>
-                </div>
-              </div>
+              ))}
+              {leads.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>No leads yet. Add one in Opportunities tab.</p>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Opportunities Pipeline */}
+      {/* OPPORTUNITIES */}
       {subTab === 'opportunities' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', overflowX: 'auto' }}>
-            {(['Active', 'Negotiation', 'Won', 'Lost'] as const).map(stage => {
-              const stageDeals = deals.filter(d => d.stage === stage);
-              return (
-                <div key={stage} style={{ background: 'var(--color-linen)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--color-border)', paddingBottom: '6px' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: 'bold' }}>{stage}</span>
-                    <span style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--color-surface)', borderRadius: '8px', fontWeight: 'bold' }}>{stageDeals.length}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '450px' }}>
-                    {stageDeals.map(d => (
-                      <div key={d.id} className="glass-panel" style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px', border: '1px solid var(--color-border)' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '12.5px' }}>{d.title}</span>
-                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{d.clientName}</span>
-                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-secondary)' }}>${parseFloat(d.expectedValue).toLocaleString()}</span>
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                          <button onClick={() => handleUpdateDealStage(d.id, 'Negotiation')} style={{ fontSize: '9px', background: '#fff8e1', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 4px' }}>Negotiate</button>
-                          <button onClick={() => handleUpdateDealStage(d.id, 'Won')} style={{ fontSize: '9px', background: '#e8f5e9', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 4px' }}>Won</button>
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '1.5rem' }}>
+          <div style={{ overflowX: 'auto' }}>
+            {loading && <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>Loading leads...</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(160px, 1fr))', gap: '1rem' }}>
+              {STATUSES.map(status => {
+                const statusLeads = leads.filter(l => l.status === status);
+                return (
+                  <div key={status} style={{ background: 'var(--color-linen)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `2px solid ${STATUS_COLOR[status]}`, paddingBottom: '6px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: STATUS_COLOR[status] }}>{STATUS_LABEL[status]}</span>
+                      <span style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--color-surface)', borderRadius: '8px', fontWeight: 'bold' }}>{statusLeads.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
+                      {statusLeads.map(lead => (
+                        <div key={lead.id} className="glass-panel" style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px', border: '1px solid var(--color-border)' }}>
+                          <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{lead.name}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{lead.company || lead.college || '—'}</span>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-secondary)' }}>₹{parseFloat(lead.expected_deal_value).toLocaleString()}</span>
+                          <span style={{ fontSize: '10px', color: lead.priority === 'HIGH' ? '#EF4444' : lead.priority === 'MEDIUM' ? '#F59E0B' : '#6B7280' }}>
+                            {lead.priority} priority
+                          </span>
+                          <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
+                            {status !== 'CONTACTED' && status !== 'WON' && status !== 'LOST' && (
+                              <button onClick={() => handleUpdateLeadStatus(lead.id, 'CONTACTED')} style={{ fontSize: '9px', background: '#fff8e1', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 5px' }}>Contact</button>
+                            )}
+                            {status !== 'PROPOSAL_SENT' && status !== 'WON' && status !== 'LOST' && (
+                              <button onClick={() => handleUpdateLeadStatus(lead.id, 'PROPOSAL_SENT')} style={{ fontSize: '9px', background: '#e3f2fd', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 5px' }}>Proposal</button>
+                            )}
+                            {status !== 'WON' && status !== 'LOST' && (
+                              <button onClick={() => handleUpdateLeadStatus(lead.id, 'WON')} style={{ fontSize: '9px', background: '#e8f5e9', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 5px' }}>Won ✓</button>
+                            )}
+                            {status !== 'LOST' && (
+                              <button onClick={() => handleUpdateLeadStatus(lead.id, 'LOST')} style={{ fontSize: '9px', background: '#ffebee', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 5px' }}>Lost ✗</button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                      {statusLeads.length === 0 && (
+                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', textAlign: 'center', padding: '10px 0' }}>Empty</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Add Opportunity */}
           <div className="glass-panel" style={{ padding: '1.5rem', height: 'fit-content' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Add Deal Opportunity</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Add New Lead</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Deal Title</label>
-                <input type="text" value={newDealTitle} onChange={e => setNewDealTitle(e.target.value)} placeholder="Fullstack Training" style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+                <label style={labelStyle}>Name *</label>
+                <input style={inputStyle} value={newLead.name} onChange={e => setNewLead(p => ({ ...p, name: e.target.value }))} placeholder="Contact / Lead name" />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Select Client</label>
-                <select value={newDealClient} onChange={e => setNewDealClient(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="MIT Pune">MIT Pune</option>
-                  <option value="VIT Vellore">VIT Vellore</option>
-                  <option value="Stanford University">Stanford University</option>
+                <label style={labelStyle}>Company</label>
+                <input style={inputStyle} value={newLead.company} onChange={e => setNewLead(p => ({ ...p, company: e.target.value }))} placeholder="Company name" />
+              </div>
+              <div>
+                <label style={labelStyle}>College</label>
+                <input style={inputStyle} value={newLead.college} onChange={e => setNewLead(p => ({ ...p, college: e.target.value }))} placeholder="College name" />
+              </div>
+              <div>
+                <label style={labelStyle}>Phone</label>
+                <input style={inputStyle} value={newLead.phone} onChange={e => setNewLead(p => ({ ...p, phone: e.target.value }))} placeholder="+91 9999999999" />
+              </div>
+              <div>
+                <label style={labelStyle}>Email</label>
+                <input style={inputStyle} type="email" value={newLead.email} onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
+              </div>
+              <div>
+                <label style={labelStyle}>Deal Value (₹) *</label>
+                <input style={inputStyle} type="number" value={newLead.expected_deal_value} onChange={e => setNewLead(p => ({ ...p, expected_deal_value: e.target.value }))} placeholder="15000" />
+              </div>
+              <div>
+                <label style={labelStyle}>Priority</label>
+                <select style={inputStyle} value={newLead.priority} onChange={e => setNewLead(p => ({ ...p, priority: e.target.value as Lead['priority'] }))}>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Value ($)</label>
-                <input type="number" value={newDealVal} onChange={e => setNewDealVal(e.target.value)} placeholder="15000" style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Stage</label>
-                <select value={newDealStage} onChange={e => setNewDealStage(e.target.value as any)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="Active">Active Opportunity</option>
-                  <option value="Negotiation">Negotiation</option>
+                <label style={labelStyle}>Status</label>
+                <select style={inputStyle} value={newLead.status} onChange={e => setNewLead(p => ({ ...p, status: e.target.value as Lead['status'] }))}>
+                  <option value="LEAD">New Lead</option>
+                  <option value="CONTACTED">Contacted</option>
+                  <option value="PROPOSAL_SENT">Proposal Sent</option>
                 </select>
               </div>
-              <button onClick={handleCreateDeal} style={{ padding: '10px', background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                Add Opportunity
+              <div>
+                <label style={labelStyle}>Remarks</label>
+                <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }} value={newLead.remarks} onChange={e => setNewLead(p => ({ ...p, remarks: e.target.value }))} placeholder="Notes about this lead..." />
+              </div>
+              <button onClick={handleCreateLead} style={{ padding: '10px', background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Add Lead
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Quotations View */}
+      {/* QUOTATIONS */}
       {subTab === 'quotations' && (
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Quotations & Proposal Templates</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Proposals</h3>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: '12px' }}>
-                  <th style={{ padding: '10px' }}>Quote No</th>
-                  <th style={{ padding: '10px' }}>Client</th>
+                  <th style={{ padding: '10px' }}>Title</th>
                   <th style={{ padding: '10px' }}>Cost</th>
                   <th style={{ padding: '10px' }}>Discount</th>
-                  <th style={{ padding: '10px' }}>18% GST</th>
+                  <th style={{ padding: '10px' }}>GST (18%)</th>
                   <th style={{ padding: '10px' }}>Net</th>
                   <th style={{ padding: '10px' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {quotes.map(q => (
-                  <tr key={q.id} style={{ borderBottom: '1px solid var(--color-border)', fontSize: '13px' }}>
-                    <td style={{ padding: '12px', fontWeight: 'bold' }}>{q.quoteNo}</td>
-                    <td style={{ padding: '12px' }}>{q.clientName}</td>
-                    <td style={{ padding: '12px' }}>${q.trainingCost}</td>
-                    <td style={{ padding: '12px', color: 'var(--color-error)' }}>-${q.discount}</td>
-                    <td style={{ padding: '12px' }}>${q.gst}</td>
-                    <td style={{ padding: '12px', fontWeight: 'bold', color: 'var(--color-secondary)' }}>${q.netAmount}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#e8f5e9', color: '#2e7d32', fontSize: '11px', fontWeight: 'bold' }}>
-                        {q.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {proposals.map(p => {
+                  const cost = parseFloat(p.training_cost);
+                  const disc = parseFloat(p.discount);
+                  const gst = parseFloat(p.gst);
+                  const net = cost - disc + gst;
+                  return (
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border)', fontSize: '13px' }}>
+                      <td style={{ padding: '12px', fontWeight: 'bold' }}>{p.title}</td>
+                      <td style={{ padding: '12px' }}>₹{cost.toLocaleString()}</td>
+                      <td style={{ padding: '12px', color: 'var(--color-error)' }}>-₹{disc.toLocaleString()}</td>
+                      <td style={{ padding: '12px' }}>₹{gst.toLocaleString()}</td>
+                      <td style={{ padding: '12px', fontWeight: 'bold', color: 'var(--color-secondary)' }}>₹{net.toLocaleString()}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: '4px', background: p.status === 'WON' ? '#e8f5e9' : p.status === 'LOST' ? '#ffebee' : '#e3f2fd', fontSize: '11px', fontWeight: 'bold' }}>
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {proposals.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>No proposals yet.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', height: 'fit-content' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Generate Quotation</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Create Proposal</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Select Client</label>
-                <select value={quoteClient} onChange={e => setQuoteClient(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="MIT Pune">MIT Pune</option>
-                  <option value="VIT Vellore">VIT Vellore</option>
-                </select>
+                <label style={labelStyle}>Proposal Title *</label>
+                <input style={inputStyle} value={newProposal.title} onChange={e => setNewProposal(p => ({ ...p, title: e.target.value }))} placeholder="React JS Training Proposal" />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Gross Cost ($)</label>
-                <input type="number" value={quoteCost} onChange={e => setQuoteCost(e.target.value)} placeholder="18000" style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+                <label style={labelStyle}>Training Cost (₹) *</label>
+                <input style={inputStyle} type="number" value={newProposal.training_cost} onChange={e => setNewProposal(p => ({ ...p, training_cost: e.target.value }))} placeholder="18000" />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Discount Amount ($)</label>
-                <input type="number" value={quoteDisc} onChange={e => setQuoteDisc(e.target.value)} placeholder="2000" style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+                <label style={labelStyle}>Discount (₹)</label>
+                <input style={inputStyle} type="number" value={newProposal.discount} onChange={e => setNewProposal(p => ({ ...p, discount: e.target.value }))} placeholder="2000" />
               </div>
-              <button onClick={handleCreateQuote} style={{ padding: '10px', background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                Generate Quote
+              {newProposal.training_cost && (
+                <div style={{ background: 'var(--color-linen)', padding: '10px', borderRadius: '8px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Taxable</span>
+                    <strong>₹{(parseFloat(newProposal.training_cost || '0') - parseFloat(newProposal.discount || '0')).toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>GST 18%</span>
+                    <strong>₹{Math.round((parseFloat(newProposal.training_cost || '0') - parseFloat(newProposal.discount || '0')) * 0.18).toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '4px', borderTop: '1px solid var(--color-border)', paddingTop: '4px' }}>
+                    <span>Net Total</span>
+                    <strong style={{ color: 'var(--color-secondary)' }}>
+                      ₹{Math.round((parseFloat(newProposal.training_cost || '0') - parseFloat(newProposal.discount || '0')) * 1.18).toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+              )}
+              <button onClick={handleCreateProposal} style={{ padding: '10px', background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Generate Proposal
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sales Follow-up log */}
+      {/* FOLLOW-UP */}
       {subTab === 'followup' && (
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Negotiations & Contracts Discussions Logs</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Lead Follow-up Log</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {deals.map(deal => (
-              <div key={deal.id} style={{ padding: '12px', borderBottom: '1px solid var(--color-border)' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--color-secondary)' }}>{deal.title}</span>
-                <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Latest Discussion:</strong> {deal.followupNotes}</p>
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Last Contact: {deal.lastContact}</span>
+            {leads.filter(l => l.remarks || l.follow_up_date).map(lead => (
+              <div key={lead.id} style={{ padding: '12px', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--color-secondary)' }}>{lead.name}</span>
+                  <span style={{ fontSize: '11px', padding: '2px 8px', background: STATUS_COLOR[lead.status] + '22', color: STATUS_COLOR[lead.status], borderRadius: '4px', fontWeight: 'bold' }}>
+                    {STATUS_LABEL[lead.status]}
+                  </span>
+                </div>
+                <p style={{ margin: '4px 0', fontSize: '13px' }}>{lead.remarks || 'No remarks added.'}</p>
+                {lead.follow_up_date && (
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Follow-up: {lead.follow_up_date}</span>
+                )}
               </div>
             ))}
+            {leads.filter(l => l.remarks || l.follow_up_date).length === 0 && (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>No follow-up data. Add remarks when creating leads.</p>
+            )}
           </div>
         </div>
       )}
 
-      {/* Client Meetings */}
+      {/* MEETINGS */}
       {subTab === 'meetings' && (
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -412,10 +536,10 @@ const SalesCRM: React.FC = () => {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: '12px' }}>
                   <th style={{ padding: '10px' }}>Client</th>
-                  <th style={{ padding: '10px' }}>Session / Title</th>
+                  <th style={{ padding: '10px' }}>Title</th>
                   <th style={{ padding: '10px' }}>Date</th>
                   <th style={{ padding: '10px' }}>Time</th>
-                  <th style={{ padding: '10px' }}>Outcome Notes</th>
+                  <th style={{ padding: '10px' }}>Outcome</th>
                 </tr>
               </thead>
               <tbody>
@@ -431,53 +555,47 @@ const SalesCRM: React.FC = () => {
               </tbody>
             </table>
           </div>
-
           <div className="glass-panel" style={{ padding: '1.5rem', height: 'fit-content' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Schedule Client Meeting</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1rem' }}>Schedule Meeting</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Client</label>
-                <select value={meetClient} onChange={e => setMeetClient(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="MIT Pune">MIT Pune</option>
-                  <option value="VIT Vellore">VIT Vellore</option>
-                </select>
+                <label style={labelStyle}>Client Name</label>
+                <input style={inputStyle} value={meetClient} onChange={e => setMeetClient(e.target.value)} placeholder="Client / College name" />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Session Title</label>
-                <input type="text" value={meetTitle} onChange={e => setMeetTitle(e.target.value)} placeholder="Curriculum Review Demo" style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+                <label style={labelStyle}>Session Title</label>
+                <input style={inputStyle} value={meetTitle} onChange={e => setMeetTitle(e.target.value)} placeholder="Curriculum Review Demo" />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Date</label>
-                <input type="date" value={meetDate} onChange={e => setMeetDate(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+                <label style={labelStyle}>Date</label>
+                <input style={inputStyle} type="date" value={meetDate} onChange={e => setMeetDate(e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Time</label>
-                <input type="text" value={meetTime} onChange={e => setMeetTime(e.target.value)} placeholder="11:30 AM" style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+                <label style={labelStyle}>Time</label>
+                <input style={inputStyle} value={meetTime} onChange={e => setMeetTime(e.target.value)} placeholder="11:30 AM" />
               </div>
               <button onClick={handleAddMeeting} style={{ padding: '10px', background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                Schedule Demo
+                Schedule Meeting
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sales Documents */}
+      {/* DOCUMENTS */}
       {subTab === 'documents' && (
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1.5rem' }}>Client Agreements, Contracts & Quotations</h3>
-          
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '1.5rem' }}>Client Agreements & Contracts</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             <div style={{ padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px' }}>
               <h5 style={{ fontWeight: 'bold', fontSize: '13.5px', marginBottom: '4px' }}>MIT_Pune_Quotation_Q-1024.pdf</h5>
               <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Type: Quotation • Date: 2026-07-08</span>
-              <button onClick={() => addToast('Downloading Quotation PDF...', 'success')} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--color-secondary)', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', padding: 0 }}>Download</button>
+              <button onClick={() => addToast('Downloading...', 'success')} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--color-secondary)', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', padding: 0 }}>Download</button>
             </div>
-            
             <div style={{ padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px' }}>
               <h5 style={{ fontWeight: 'bold', fontSize: '13.5px', marginBottom: '4px' }}>VIT_Vellore_Syllabus_Agreement_Signed.pdf</h5>
               <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Type: Signed Agreement • Date: 2026-07-07</span>
-              <button onClick={() => addToast('Downloading Signed MoU...', 'success')} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--color-secondary)', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', padding: 0 }}>Download</button>
+              <button onClick={() => addToast('Downloading...', 'success')} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--color-secondary)', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', padding: 0 }}>Download</button>
             </div>
           </div>
         </div>

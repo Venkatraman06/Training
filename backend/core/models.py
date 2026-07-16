@@ -97,6 +97,36 @@ class Client(models.Model):
     def __str__(self):
         return self.name
 
+class Meeting(models.Model):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='meetings')
+    title = models.CharField(max_length=255)
+    date = models.DateField()
+    time = models.CharField(max_length=50)
+    outcome = models.CharField(max_length=255, default='Scheduled')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.lead.name}"
+
+class LeadTask(models.Model):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='lead_tasks')
+    title = models.CharField(max_length=255)
+    due_date = models.DateField()
+    completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+class LeadDocument(models.Model):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='documents')
+    name = models.CharField(max_length=255)
+    doc_type = models.CharField(max_length=50, default='Other')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
 class Proposal(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),

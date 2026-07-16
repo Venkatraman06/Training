@@ -33,7 +33,8 @@ interface Lead {
 
 interface ActivityLog {
   id: number;
-  lead_name: string;
+  lead: number | null;
+  lead_name: string | null;
   activity_type: 'CALL' | 'MEETING' | 'EMAIL' | 'WHATSAPP' | 'NOTE' | 'REMINDER';
   description: string;
   created_at: string;
@@ -41,6 +42,7 @@ interface ActivityLog {
 
 interface Meeting {
   id: number;
+  lead: number;
   lead_name: string;
   title: string;
   date: string;
@@ -50,6 +52,7 @@ interface Meeting {
 
 interface LeadTask {
   id: number;
+  lead: number;
   lead_name: string;
   title: string;
   due_date: string;
@@ -58,9 +61,10 @@ interface LeadTask {
 
 interface LeadDoc {
   id: number;
+  lead: number;
   lead_name: string;
   name: string;
-  type: string;
+  doc_type: string;
   uploaded_at: string;
 }
 
@@ -103,44 +107,40 @@ const TrainingCRM: React.FC = () => {
     }
   };
 
-  // Mock states for other sub-modules
-  const [activities, setActivities] = useState<ActivityLog[]>([
-    { id: 1, lead_name: 'Stanford University', activity_type: 'EMAIL', description: 'Sent introductory email with brochure.', created_at: '2026-07-08' },
-    { id: 2, lead_name: 'Oxford College', activity_type: 'CALL', description: 'Discussed curriculum details and pricing.', created_at: '2026-07-08' },
-    { id: 3, lead_name: 'Cambridge Institute', activity_type: 'WHATSAPP', description: 'Shared custom proposal via WhatsApp.', created_at: '2026-07-07' }
-  ]);
+  // Follow-up activities (real backend data via ActivityLog)
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [newActivityDesc, setNewActivityDesc] = useState('');
   const [newActivityType, setNewActivityType] = useState<ActivityLog['activity_type']>('CALL');
-  const [selectedLeadForActivity, setSelectedLeadForActivity] = useState<string>('Stanford University');
+  const [selectedLeadForActivity, setSelectedLeadForActivity] = useState<number | ''>('');
 
-  // Meetings
-  const [meetings, setMeetings] = useState<Meeting[]>([
-    { id: 1, lead_name: 'Stanford University', title: 'Curriculum Alignment Meet', date: '2026-07-10', time: '10:00 AM', outcome: 'Pending' },
-    { id: 2, lead_name: 'Oxford College', title: 'Syllabus Review & Q&A', date: '2026-07-08', time: '02:00 PM', outcome: 'Syllabus accepted' }
-  ]);
+  // Meetings (real backend data)
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [meetTitle, setMeetTitle] = useState('');
   const [meetDate, setMeetDate] = useState('');
   const [meetTime, setMeetTime] = useState('');
-  const [meetLead, setMeetLead] = useState('Stanford University');
+  const [meetLead, setMeetLead] = useState<number | ''>('');
 
-  // Tasks
-  const [tasks, setTasks] = useState<LeadTask[]>([
-    { id: 1, lead_name: 'Stanford University', title: 'Send customized IoT proposal', due_date: '2026-07-09', completed: false },
-    { id: 2, lead_name: 'Cambridge Institute', title: 'Follow up on pricing approval', due_date: '2026-07-11', completed: false },
-    { id: 3, lead_name: 'Oxford College', title: 'Schedule demo with principal', due_date: '2026-07-08', completed: true }
-  ]);
+  // Tasks (real backend data)
+  const [tasks, setTasks] = useState<LeadTask[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDue, setNewTaskDue] = useState('');
-  const [newTaskLead, setNewTaskLead] = useState('Stanford University');
+  const [newTaskLead, setNewTaskLead] = useState<number | ''>('');
 
-  // Documents
-  const [docs, setDocs] = useState<LeadDoc[]>([
-    { id: 1, lead_name: 'Stanford University', name: 'Stanford_CS_RFP.pdf', type: 'Requirement', uploaded_at: '2026-07-08' },
-    { id: 2, lead_name: 'Cambridge Institute', name: 'Cambridge_Draft_Proposal_v1.docx', type: 'Proposal', uploaded_at: '2026-07-07' }
-  ]);
+  // Documents (real backend data)
+  const [docs, setDocs] = useState<LeadDoc[]>([]);
   const [newDocName, setNewDocName] = useState('');
   const [newDocType, setNewDocType] = useState('Requirement');
-  const [newDocLead, setNewDocLead] = useState('Stanford University');
+  const [newDocLead, setNewDocLead] = useState<number | ''>('');
+
+  // Once leads are loaded, default all the "select a lead" pickers to the first real lead
+  useEffect(() => {
+    if (leads.length > 0) {
+      if (selectedLeadForActivity === '') setSelectedLeadForActivity(leads[0].id);
+      if (meetLead === '') setMeetLead(leads[0].id);
+      if (newTaskLead === '') setNewTaskLead(leads[0].id);
+      if (newDocLead === '') setNewDocLead(leads[0].id);
+    }
+  }, [leads]);
 
   const fetchLeads = async () => {
     try {
@@ -160,37 +160,77 @@ const TrainingCRM: React.FC = () => {
   };
 
   const setMockLeads = () => {
-    const mockData: Lead[] = [
-      {
-        id: 1, name: 'Stanford University', company: 'Stanford Group', college: 'Computer Science Dept',
-        contact_person: 'Dr. Alan', designation: 'Dean', phone: '+12345678', whatsapp: '+12345678',
-        email: 'alan@stanford.edu', location: 'USA', lead_source: 'Website', status: 'LEAD',
-        priority: 'HIGH', remarks: 'Interested in Cloud/AI Bootcamp', expected_deal_value: '15000.00',
-        training_requirement: '10-day hands-on Cloud workshop', follow_up_date: '2026-07-09',
-        next_follow_up: '2026-07-15', last_contact_date: '2026-07-08', notes: 'Very eager to start.'
-      },
-      {
-        id: 2, name: 'Oxford College', company: 'Oxford Group', college: 'Engineering College',
-        contact_person: 'Prof. Emma', designation: 'HOD', phone: '+44654321', whatsapp: '+44654321',
-        email: 'emma@oxford.edu', location: 'UK', lead_source: 'LinkedIn', status: 'CONTACTED',
-        priority: 'MEDIUM', remarks: 'Requested syllabus for Python', expected_deal_value: '12000.00',
-        training_requirement: 'Python fullstack curriculum', follow_up_date: '2026-07-10',
-        next_follow_up: '2026-07-12', last_contact_date: '2026-07-06', notes: 'Syllabus sent.'
-      },
-      {
-        id: 3, name: 'Cambridge Institute', company: 'Cambridge Science', college: 'Science Division',
-        contact_person: 'Dr. Isaac', designation: 'Director', phone: '+44998877', whatsapp: '+44998877',
-        email: 'isaac@cambridge.edu', location: 'UK', lead_source: 'Email Campaign', status: 'PROPOSAL_SENT',
-        priority: 'HIGH', remarks: 'Sent customized package quotation', expected_deal_value: '22000.00',
-        training_requirement: 'AI/ML Bootcamp with certifications', follow_up_date: '2026-07-12',
-        next_follow_up: '2026-07-14', last_contact_date: '2026-07-07', notes: 'Awaiting pricing approval.'
+    // Backend unreachable - keep whatever leads are already in state instead of
+    // silently showing fake institutions that don't exist in the database.
+    addToast('Could not reach backend - check that the Django server is running on port 8000', 'error');
+  };
+
+  const fetchActivities = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/activities/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data);
       }
-    ];
-    setLeads(mockData);
+    } catch (e) {
+      console.warn('Failed to load activities', e);
+    }
+  };
+
+  const fetchMeetings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/meetings/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMeetings(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load meetings', e);
+    }
+  };
+
+  const fetchLeadTasks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/lead-tasks/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load lead tasks', e);
+    }
+  };
+
+  const fetchDocs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/lead-documents/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDocs(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load lead documents', e);
+    }
   };
 
   useEffect(() => {
     fetchLeads();
+    fetchActivities();
+    fetchMeetings();
+    fetchLeadTasks();
+    fetchDocs();
   }, []);
 
   const handleCreateLead = async (leadData: Partial<Lead>) => {
@@ -209,34 +249,12 @@ const TrainingCRM: React.FC = () => {
         fetchLeads();
         closeModal();
       } else {
-        const newLead: Lead = {
-          id: leads.length + 1,
-          name: leadData.name || 'New Lead',
-          company: leadData.company || '',
-          college: leadData.college || '',
-          contact_person: leadData.contact_person || '',
-          designation: leadData.designation || '',
-          phone: leadData.phone || '',
-          whatsapp: leadData.whatsapp || '',
-          email: leadData.email || '',
-          location: leadData.location || '',
-          lead_source: leadData.lead_source || 'Manual',
-          status: (leadData.status as any) || 'LEAD',
-          priority: (leadData.priority as any) || 'MEDIUM',
-          remarks: leadData.remarks || '',
-          expected_deal_value: leadData.expected_deal_value || '0.00',
-          training_requirement: leadData.training_requirement || '',
-          follow_up_date: leadData.follow_up_date || null,
-          next_follow_up: leadData.next_follow_up || null,
-          last_contact_date: new Date().toISOString().split('T')[0],
-          notes: leadData.notes || ''
-        };
-        setLeads(prev => [newLead, ...prev]);
-        addToast('Lead created successfully (Mock mode)!', 'success');
-        closeModal();
+        const errText = await response.text();
+        console.error('Lead create failed:', errText);
+        addToast('Failed to save lead to backend - it will not persist after refresh', 'error');
       }
     } catch (e) {
-      addToast('Error saving lead. Try again.', 'error');
+      addToast('Error saving lead - check backend is running on port 8000', 'error');
     }
   };
 
@@ -247,7 +265,7 @@ const TrainingCRM: React.FC = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/leads/${id}/`, {
+      const response = await fetch(`${API_URL}/leads/${id}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -255,83 +273,134 @@ const TrainingCRM: React.FC = () => {
         },
         body: JSON.stringify({ status: newStatus })
       });
+      if (!response.ok) {
+        addToast('Status change failed to save to backend', 'error');
+      }
     } catch (e) {
-      console.warn("Backend update failed");
+      addToast('Status change failed to save to backend', 'error');
     }
   };
 
-  const handleAddFollowup = () => {
-    if (!newActivityDesc.trim()) return;
-    const act: ActivityLog = {
-      id: Date.now(),
-      lead_name: selectedLeadForActivity,
-      activity_type: newActivityType,
-      description: newActivityDesc,
-      created_at: new Date().toISOString().split('T')[0]
-    };
-    setActivities([act, ...activities]);
-    setNewActivityDesc('');
-    addToast('Follow-up logged successfully!', 'success');
+  const handleAddFollowup = async () => {
+    if (!newActivityDesc.trim() || selectedLeadForActivity === '') return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/activities/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          lead: selectedLeadForActivity,
+          activity_type: newActivityType,
+          description: newActivityDesc
+        })
+      });
+      if (response.ok) {
+        setNewActivityDesc('');
+        addToast('Follow-up logged successfully!', 'success');
+        fetchActivities();
+      } else {
+        addToast('Failed to save follow-up to backend', 'error');
+      }
+    } catch (e) {
+      addToast('Failed to save follow-up to backend', 'error');
+    }
   };
 
-  const handleAddMeeting = () => {
-    if (!meetTitle || !meetDate || !meetTime) {
+  const handleAddMeeting = async () => {
+    if (!meetTitle || !meetDate || !meetTime || meetLead === '') {
       addToast('Please fill all meeting details', 'error');
       return;
     }
-    const meet: Meeting = {
-      id: Date.now(),
-      lead_name: meetLead,
-      title: meetTitle,
-      date: meetDate,
-      time: meetTime,
-      outcome: 'Scheduled'
-    };
-    setMeetings([meet, ...meetings]);
-    setMeetTitle('');
-    setMeetDate('');
-    setMeetTime('');
-    addToast('Meeting scheduled successfully!', 'success');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/meetings/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ lead: meetLead, title: meetTitle, date: meetDate, time: meetTime })
+      });
+      if (response.ok) {
+        setMeetTitle('');
+        setMeetDate('');
+        setMeetTime('');
+        addToast('Meeting scheduled successfully!', 'success');
+        fetchMeetings();
+      } else {
+        addToast('Failed to save meeting to backend', 'error');
+      }
+    } catch (e) {
+      addToast('Failed to save meeting to backend', 'error');
+    }
   };
 
-  const handleAddTask = () => {
-    if (!newTaskTitle || !newTaskDue) {
+  const handleAddTask = async () => {
+    if (!newTaskTitle || !newTaskDue || newTaskLead === '') {
       addToast('Please fill task details', 'error');
       return;
     }
-    const task: LeadTask = {
-      id: Date.now(),
-      lead_name: newTaskLead,
-      title: newTaskTitle,
-      due_date: newTaskDue,
-      completed: false
-    };
-    setTasks([task, ...tasks]);
-    setNewTaskTitle('');
-    setNewTaskDue('');
-    addToast('Task created successfully!', 'success');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/lead-tasks/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ lead: newTaskLead, title: newTaskTitle, due_date: newTaskDue })
+      });
+      if (response.ok) {
+        setNewTaskTitle('');
+        setNewTaskDue('');
+        addToast('Task created successfully!', 'success');
+        fetchLeadTasks();
+      } else {
+        addToast('Failed to save task to backend', 'error');
+      }
+    } catch (e) {
+      addToast('Failed to save task to backend', 'error');
+    }
   };
 
-  const handleToggleTask = (id: number) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    addToast('Task status updated', 'info');
+  const handleToggleTask = async (id: number) => {
+    const target = tasks.find(t => t.id === id);
+    if (!target) return;
+    const newCompleted = !target.completed;
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: newCompleted } : t));
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/lead-tasks/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ completed: newCompleted })
+      });
+      if (response.ok) {
+        addToast('Task status updated', 'info');
+      } else {
+        addToast('Failed to save task status to backend', 'error');
+      }
+    } catch (e) {
+      addToast('Failed to save task status to backend', 'error');
+    }
   };
 
-  const handleAddDoc = () => {
-    if (!newDocName) {
+  const handleAddDoc = async () => {
+    if (!newDocName || newDocLead === '') {
       addToast('Please enter document name', 'error');
       return;
     }
-    const doc: LeadDoc = {
-      id: Date.now(),
-      lead_name: newDocLead,
-      name: newDocName,
-      type: newDocType,
-      uploaded_at: new Date().toISOString().split('T')[0]
-    };
-    setDocs([doc, ...docs]);
-    setNewDocName('');
-    addToast('Document attached successfully!', 'success');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/lead-documents/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ lead: newDocLead, name: newDocName, doc_type: newDocType })
+      });
+      if (response.ok) {
+        setNewDocName('');
+        addToast('Document attached successfully!', 'success');
+        fetchDocs();
+      } else {
+        addToast('Failed to save document to backend', 'error');
+      }
+    } catch (e) {
+      addToast('Failed to save document to backend', 'error');
+    }
   };
 
   const filteredLeads = leads.filter(l => {
@@ -413,14 +482,14 @@ const TrainingCRM: React.FC = () => {
               <div style={{ padding: '10px', background: 'rgba(16,185,129,0.1)', borderRadius: '8px', color: '#10B981' }}><TrendingUp size={24} /></div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Conversion Rate</span>
-                <h4 style={{ fontSize: '20px', fontWeight: 'bold', margin: '4px 0 0 0' }}>33.3%</h4>
+                <h4 style={{ fontSize: '20px', fontWeight: 'bold', margin: '4px 0 0 0' }}>{leads.length > 0 ? ((leads.filter(l => l.status === 'WON').length / leads.length) * 100).toFixed(1) : '0.0'}%</h4>
               </div>
             </div>
             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ padding: '10px', background: 'rgba(124,58,237,0.1)', borderRadius: '8px', color: 'var(--color-accent)' }}><BarChart2 size={24} /></div>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Expected Value</span>
-                <h4 style={{ fontSize: '20px', fontWeight: 'bold', margin: '4px 0 0 0' }}>$49,000</h4>
+                <h4 style={{ fontSize: '20px', fontWeight: 'bold', margin: '4px 0 0 0' }}>${leads.reduce((sum, l) => sum + parseFloat(l.expected_deal_value || '0'), 0).toLocaleString()}</h4>
               </div>
             </div>
           </div>
@@ -630,10 +699,8 @@ const TrainingCRM: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Select Lead</label>
-                <select value={selectedLeadForActivity} onChange={e => setSelectedLeadForActivity(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="Stanford University">Stanford University</option>
-                  <option value="Oxford College">Oxford College</option>
-                  <option value="Cambridge Institute">Cambridge Institute</option>
+                <select value={selectedLeadForActivity} onChange={e => setSelectedLeadForActivity(Number(e.target.value))} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+                  {leads.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
@@ -696,10 +763,8 @@ const TrainingCRM: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Lead</label>
-                <select value={meetLead} onChange={e => setMeetLead(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="Stanford University">Stanford University</option>
-                  <option value="Oxford College">Oxford College</option>
-                  <option value="Cambridge Institute">Cambridge Institute</option>
+                <select value={meetLead} onChange={e => setMeetLead(Number(e.target.value))} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+                  {leads.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
@@ -756,10 +821,8 @@ const TrainingCRM: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Lead</label>
-                <select value={newTaskLead} onChange={e => setNewTaskLead(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="Stanford University">Stanford University</option>
-                  <option value="Oxford College">Oxford College</option>
-                  <option value="Cambridge Institute">Cambridge Institute</option>
+                <select value={newTaskLead} onChange={e => setNewTaskLead(Number(e.target.value))} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+                  {leads.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
@@ -792,7 +855,7 @@ const TrainingCRM: React.FC = () => {
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                     <span>Lead: {doc.lead_name}</span>
-                    <span style={{ display: 'block' }}>Type: {doc.type} • Uploaded: {doc.uploaded_at}</span>
+                    <span style={{ display: 'block' }}>Type: {doc.doc_type} • Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                     <button onClick={() => addToast('Downloading file...', 'info')} style={{ background: 'none', border: 'none', color: 'var(--color-secondary)', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
@@ -809,10 +872,8 @@ const TrainingCRM: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', fontWeight: '600' }}>Lead</label>
-                <select value={newDocLead} onChange={e => setNewDocLead(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                  <option value="Stanford University">Stanford University</option>
-                  <option value="Oxford College">Oxford College</option>
-                  <option value="Cambridge Institute">Cambridge Institute</option>
+                <select value={newDocLead} onChange={e => setNewDocLead(Number(e.target.value))} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+                  {leads.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
@@ -849,9 +910,15 @@ const LeadForm = ({ onSubmit, onClose }: { onSubmit: (data: Partial<Lead>) => vo
   });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
+  e.preventDefault();
+  const cleaned = {
+    ...formData,
+    follow_up_date: formData.follow_up_date || null,
+    next_follow_up: formData.next_follow_up || null,
+    last_contact_date: formData.last_contact_date || null,
   };
+  onSubmit(cleaned);
+};
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -926,18 +993,11 @@ const LeadDetailsView = ({ lead, onUpdateStatus }: { lead: Lead; onUpdateStatus:
         const data = await response.json();
         setActivities(data);
       } else {
-        setMockActivities();
+        addToast('Could not load activity history from backend', 'error');
       }
     } catch (e) {
-      setMockActivities();
+      addToast('Could not load activity history from backend', 'error');
     }
-  };
-
-  const setMockActivities = () => {
-    setActivities([
-      { id: 1, lead_name: lead.name, activity_type: 'EMAIL', description: 'Sent introductory email with brochure.', created_at: '2026-07-08T10:00:00Z' },
-      { id: 2, lead_name: lead.name, activity_type: 'CALL', description: 'Discussed curriculum details and pricing.', created_at: '2026-07-08T12:30:00Z' }
-    ]);
   };
 
   useEffect(() => {
@@ -969,19 +1029,10 @@ const LeadDetailsView = ({ lead, onUpdateStatus }: { lead: Lead; onUpdateStatus:
         setNewActivity('');
         fetchActivities();
       } else {
-        const mockAct: ActivityLog = {
-          id: Date.now(),
-          lead_name: lead.name,
-          activity_type: activityType,
-          description: newActivity,
-          created_at: new Date().toISOString()
-        };
-        setActivities(prev => [mockAct, ...prev]);
-        setNewActivity('');
-        addToast('Activity logged (Mock mode)!', 'success');
+        addToast('Failed to save activity to backend - it will not persist', 'error');
       }
     } catch (err) {
-      addToast('Error logging activity', 'error');
+      addToast('Error logging activity - check backend is running', 'error');
     }
   };
 

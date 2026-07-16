@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from .models import Task, Lead, Client, Proposal, ActivityLog, College, Trainer, Training, Student, PersonalStudent
+from .models import Task, Lead, Client, Proposal, ActivityLog, College, Trainer, Training, Student, PersonalStudent, Meeting, LeadTask, LeadDocument
 
 User = get_user_model()
 
@@ -54,9 +54,37 @@ class ProposalSerializer(serializers.ModelSerializer):
 
 class ActivityLogSerializer(serializers.ModelSerializer):
     created_by_details = UserSerializer(source='created_by', read_only=True)
-    
+    lead_name = serializers.SerializerMethodField()
+
     class Meta:
         model = ActivityLog
+        fields = '__all__'
+
+    def get_lead_name(self, obj):
+        return obj.lead.name if obj.lead else (obj.client.name if obj.client else None)
+
+
+class MeetingSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+
+    class Meta:
+        model = Meeting
+        fields = '__all__'
+
+
+class LeadTaskSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+
+    class Meta:
+        model = LeadTask
+        fields = '__all__'
+
+
+class LeadDocumentSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+
+    class Meta:
+        model = LeadDocument
         fields = '__all__'
 
 class CollegeSerializer(serializers.ModelSerializer):
